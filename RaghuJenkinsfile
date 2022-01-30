@@ -1,0 +1,30 @@
+node{
+    
+    stage('checkout SCM'){
+        git branch: 'main', url: 'https://github.com/RaghuveerT1994/java-web-app.git'
+    }
+    
+    stage('mvn build'){
+        def mavenHome = tool name:"maven-3.8.4", type: "maven"
+        def mavenCMD = "${mavenHome}/bin/mvn"
+        sh "${mavenCMD} clean package"
+    }
+    
+    stage('Building docker image'){
+        sh "docker build -t raghuveerat/java-web-app:1.7 ."
+    }
+    
+    stage('pushing Docker image'){
+        withCredentials([string(credentialsId: 'DOCKER_HUB_CRED', variable: 'DOCKER_HUB_CRED')]){
+            sh "docker login -u raghuveerat -p ${DOCKER_HUB_CRED}"
+        }
+        sh "docker push raghuveerat/java-web-app:1.7"
+    }
+    
+    stage('deploy on kubernetes'){
+        
+        kubernetesDeploy configs: 'javawebapp-deployment.yml', kubeConfig: [path: ''], kubeconfigId: 'kubernetes', secretName: '', ssh: [sshCredentialsId: '*', sshServer: ''], textCredentials: [certificateAuthorityData: '', clientCertificateData: '', clientKeyData: '', serverUrl: 'https://']
+        
+    }
+    
+}
